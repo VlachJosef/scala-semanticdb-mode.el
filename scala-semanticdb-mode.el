@@ -22,7 +22,20 @@
    'kill-buffer-hook
    (function
     (lambda ()
-      ))
+      (let ((cb (current-buffer))
+            (kill-buffer-hook nil)
+            (source-file semanticdb-source-file))
+        (dolist (buffer (buffer-list))
+          (when (buffer-live-p buffer)
+            (with-current-buffer buffer
+              (when (or
+                     (and
+                      (not (null source-file))
+                      (eq source-file (buffer-file-name buffer)))
+                     (and
+                      semanticdb-source-file
+                      (not (eq buffer cb))))
+                (kill-buffer buffer))))))))
    nil t))
 
 (defcustom scala-semanticdb-metap "metap"
@@ -37,10 +50,10 @@
 Return a keymap with single entry for mouse key MOUSE on the header line.
 MOUSE is defined to run function FUNCTION with no args in the buffer
 corresponding to the mode line clicked."
-  (let ((map (make-sparse-keymap)))
-    (define-key map (vector 'header-line mouse) function)
-    (define-key map (vector 'header-line 'down-mouse-1) 'ignore)
-    map))
+       (let ((map (make-sparse-keymap)))
+         (define-key map (vector 'header-line mouse) function)
+         (define-key map (vector 'header-line 'down-mouse-1) 'ignore)
+         map))
 
 (defmacro scala-semanticdb-propertize-header (name fn help-echo mouse-face face)
   `(propertize ,name
@@ -202,7 +215,7 @@ When started, runs `scala-semanticdb-compact-mode-hook'."
 
 (add-hook 'scala-semanticdb-mode-hook
           (lambda (&rest args)
-            (when (string= ".semanticdb" (substring (buffer-file-name) -11 nil))
+            (when (string-suffix-p ".semanticdb" (buffer-file-name))
               (switch-to-buffer (scala-semanticdb-run-compact-metap)))))
 
 (provide 'scala-semanticdb-mode)
